@@ -1,0 +1,23 @@
+{
+  "name": "qa-automation-e2e",
+  "version": "1.0.0",
+  "description": "E2E tests for Automation Exercise with Playwright and TypeScript",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "test:db": "playwright test tests/db-crud.spec.ts",
+    "test:grpc": "playwright test tests/grpc-crud.spec.ts"
+  },
+  "devDependencies": {
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.16.0",
+    "dotenv": "^17.2.4",
+    "pg": "^8.18.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package grpc.gateway.examples.examplepb;
+
+import "sub2.proto";
+import "google/protobuf/empty.proto";
+
+// Minimal ABitOfEverything for CRUD with grpcb.in (ABitOfEverythingService).
+message ABitOfEverything {
+  string uuid = 1;
+  string string_value = 11;
+}
+
+service ABitOfEverythingService {
+  rpc Create(ABitOfEverything) returns (ABitOfEverything) {}
+  rpc Lookup(sub2.IdMessage) returns (ABitOfEverything) {}
+  rpc Update(ABitOfEverything) returns (google.protobuf.Empty) {}
+  rpc Delete(sub2.IdMessage) returns (google.protobuf.Empty) {}
+}
