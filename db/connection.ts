@@ -1,41 +1,51 @@
 /**
- * PostgreSQL connection pool.
- * Use getPool() for queries; call closePool() when shutting down (e.g. in afterAll).
+ * Database connection. Uses PostgreSQL by default; SQLite when USE_SQLITE=1.
  */
 
 import { Pool, PoolClient } from 'pg';
+import Database from 'better-sqlite3';
 import { dbConfig } from './config';
 
 let pool: Pool | null = null;
+let sqliteDb: Database.Database | null = null;
 
-/**
- * Returns the shared connection pool. Creates it on first use.
- */
+/** When true, CRUD uses SQLite instead of PostgreSQL. */
+export let isSqliteMode = dbConfig.useSqlite;
+
+export function setSqliteMode(value: boolean): void {
+  isSqliteMode = value;
+}
+
 export function getPool(): Pool {
   if (!pool) {
     pool = new Pool({
       connectionString: dbConfig.connectionString,
       max: 10,
       idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 5_000,
     });
   }
   return pool;
 }
 
-/**
- * Gets a client from the pool for transactions. Call client.release() when done.
- */
+export function getSqliteDb(): Database.Database {
+  if (!sqliteDb) {
+    sqliteDb = new Database(dbConfig.databasePath);
+  }
+  return sqliteDb;
+}
+
 export async function getClient(): Promise<PoolClient> {
   return getPool().connect();
 }
 
-/**
- * Closes the pool. Call in afterAll() or when the process exits.
- */
 export async function closePool(): Promise<void> {
   if (pool) {
     await pool.end();
     pool = null;
+  }
+  if (sqliteDb) {
+    sqliteDb.close();
+    sqliteDb = null;
   }
 }

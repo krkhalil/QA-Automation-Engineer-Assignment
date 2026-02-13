@@ -7,3 +7,6 @@ playwright-browsers/
 *.log
 .env
 .env.local
+db/test.db
+.cursor/
+.snapshots/

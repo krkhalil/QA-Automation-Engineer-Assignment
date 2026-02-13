@@ -8,16 +8,23 @@
     "test:ui": "playwright test --ui",
     "report": "playwright show-report",
     "test:db": "playwright test tests/db-crud.spec.ts",
-    "test:grpc": "playwright test tests/grpc-crud.spec.ts"
+    "test:db:sqlite": "USE_SQLITE=1 playwright test tests/db-crud.spec.ts",
+    "test:grpc": "playwright test tests/grpc-crud.spec.ts",
+    "test:e2e": "playwright test tests/e2e-flow.spec.ts",
+    "setup": "playwright install chromium"
   },
   "devDependencies": {
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "@playwright/test": "^1.49.0",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.10.0",
     "@types/pg": "^8.16.0",
     "dotenv": "^17.2.4",
     "pg": "^8.18.0",
     "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.6.2"
   }
 }

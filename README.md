@@ -1,4 +1,14 @@
-# E2E UI Automation – Automation Exercise
+# QA Automation Engineer – Assignment
+
+Solution covering:
+
+1. **UI Automation** – E2E tests for [Automation Exercise](https://www.automationexercise.com/) using Playwright, TypeScript, and the Page Object Model (POM)
+2. **Database** – PostgreSQL CRUD operations (reference: [pgexercises.com](https://pgexercises.com/))
+3. **API** – gRPC CRUD operations against [grpcb.in](https://grpcb.in/)
+
+---
+
+## UI Automation – E2E Flow
 
 End-to-end tests for [Automation Exercise](https://www.automationexercise.com/) using **Playwright** and **TypeScript** with the **Page Object Model (POM)** design pattern.
 
@@ -50,8 +60,10 @@ End-to-end tests for [Automation Exercise](https://www.automationexercise.com/) 
 
 ```bash
 npm install
-npx playwright install   # required: installs Chromium (and other browsers)
+npm run setup            # or: npx playwright install chromium
 ```
+
+If E2E tests fail with "Executable doesn't exist", run `npx playwright install` from your terminal.
 
 ## Run tests
 
@@ -116,6 +128,11 @@ Table: `demo_items` (`id`, `name`, `description`, `created_at`). Call `initTable
 npm run test:db
 # or
 npx playwright test tests/db-crud.spec.ts
+```
+
+Without PostgreSQL, tests use SQLite. Or run with SQLite explicitly:
+```bash
+npm run test:db:sqlite
 ```
 
 ### Example usage in code

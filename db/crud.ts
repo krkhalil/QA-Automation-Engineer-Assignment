@@ -1,17 +1,9 @@
 /**
- * CRUD operations for the demo table.
- *
- * Table: demo_items
- *   - id          SERIAL PRIMARY KEY
- *   - name        VARCHAR(255) NOT NULL
- *   - description TEXT
- *   - created_at  TIMESTAMP DEFAULT NOW()
- *
- * Use initTable() once (e.g. in beforeAll) to create the table.
+ * CRUD operations for demo_items table.
  */
 
 import { Pool } from 'pg';
-import { getPool } from './connection';
+import { getPool, getSqliteDb, isSqliteMode } from './connection';
 
 export const TABLE_NAME = 'demo_items';
 
@@ -19,15 +11,13 @@ export interface DemoItem {
   id?: number;
   name: string;
   description: string | null;
-  created_at?: Date;
+  created_at?: Date | string;
 }
 
-/**
- * Creates the demo_items table if it does not exist.
- */
-export async function initTable(pool?: Pool): Promise<void> {
-  const p = pool ?? getPool();
-  await p.query(`
+/** PostgreSQL: create table */
+async function initTablePg(p?: Pool): Promise<void> {
+  const p_ = p ?? getPool();
+  await p_.query(`
     CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
       id          SERIAL PRIMARY KEY,
       name        VARCHAR(255) NOT NULL,
@@ -37,13 +27,40 @@ export async function initTable(pool?: Pool): Promise<void> {
   `);
 }
 
-/**
- * Create: insert a new row. Returns the created row with id and created_at.
- */
+/** SQLite: create table */
+function initTableSqlite(): void {
+  const db = getSqliteDb();
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      name        TEXT NOT NULL,
+      description TEXT,
+      created_at  TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+export async function initTable(pool?: Pool): Promise<void> {
+  if (isSqliteMode) {
+    initTableSqlite();
+    return;
+  }
+  await initTablePg(pool);
+}
+
 export async function create(
   item: Pick<DemoItem, 'name' | 'description'>,
   pool?: Pool
 ): Promise<DemoItem> {
+  if (isSqliteMode) {
+    const db = getSqliteDb();
+    const stmt = db.prepare(
+      `INSERT INTO ${TABLE_NAME} (name, description) VALUES (?, ?)`
+    );
+    const result = stmt.run(item.name, item.description ?? null);
+    const row = read(result.lastInsertRowid as number);
+    return row!;
+  }
   const p = pool ?? getPool();
   const result = await p.query<DemoItem>(
     `INSERT INTO ${TABLE_NAME} (name, description) VALUES ($1, $2) RETURNING id, name, description, created_at`,
@@ -52,10 +69,15 @@ export async function create(
   return result.rows[0];
 }
 
-/**
- * Read: fetch a single row by id, or null if not found.
- */
 export async function read(id: number, pool?: Pool): Promise<DemoItem | null> {
+  if (isSqliteMode) {
+    const db = getSqliteDb();
+    const stmt = db.prepare(
+      `SELECT id, name, description, created_at FROM ${TABLE_NAME} WHERE id = ?`
+    );
+    const row = stmt.get(id) as DemoItem | undefined;
+    return row ?? null;
+  }
   const p = pool ?? getPool();
   const result = await p.query<DemoItem>(
     `SELECT id, name, description, created_at FROM ${TABLE_NAME} WHERE id = $1`,
@@ -64,10 +86,14 @@ export async function read(id: number, pool?: Pool): Promise<DemoItem | null> {
   return result.rows[0] ?? null;
 }
 
-/**
- * Read all: fetch all rows, optionally ordered by id.
- */
 export async function readAll(pool?: Pool): Promise<DemoItem[]> {
+  if (isSqliteMode) {
+    const db = getSqliteDb();
+    const stmt = db.prepare(
+      `SELECT id, name, description, created_at FROM ${TABLE_NAME} ORDER BY id`
+    );
+    return stmt.all() as DemoItem[];
+  }
   const p = pool ?? getPool();
   const result = await p.query<DemoItem>(
     `SELECT id, name, description, created_at FROM ${TABLE_NAME} ORDER BY id`
@@ -75,14 +101,23 @@ export async function readAll(pool?: Pool): Promise<DemoItem[]> {
   return result.rows;
 }
 
-/**
- * Update: update name and/or description by id. Returns the updated row or null.
- */
 export async function update(
   id: number,
   updates: Partial<Pick<DemoItem, 'name' | 'description'>>,
   pool?: Pool
 ): Promise<DemoItem | null> {
+  if (isSqliteMode) {
+    const existing = await read(id);
+    if (!existing) return null;
+    const name = updates.name ?? existing.name;
+    const description =
+      updates.description !== undefined ? updates.description : existing.description;
+    const db = getSqliteDb();
+    db.prepare(
+      `UPDATE ${TABLE_NAME} SET name = ?, description = ? WHERE id = ?`
+    ).run(name, description, id);
+    return read(id);
+  }
   const p = pool ?? getPool();
   const result = await p.query<DemoItem>(
     `UPDATE ${TABLE_NAME} SET name = COALESCE($2, name), description = COALESCE($3, description) WHERE id = $1 RETURNING id, name, description, created_at`,
@@ -91,10 +126,12 @@ export async function update(
   return result.rows[0] ?? null;
 }
 
-/**
- * Delete: remove a row by id. Returns true if a row was deleted.
- */
 export async function remove(id: number, pool?: Pool): Promise<boolean> {
+  if (isSqliteMode) {
+    const db = getSqliteDb();
+    const result = db.prepare(`DELETE FROM ${TABLE_NAME} WHERE id = ?`).run(id);
+    return result.changes > 0;
+  }
   const p = pool ?? getPool();
   const result = await p.query(`DELETE FROM ${TABLE_NAME} WHERE id = $1`, [id]);
   return (result.rowCount ?? 0) > 0;

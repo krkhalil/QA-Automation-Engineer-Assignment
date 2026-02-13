@@ -1,13 +1,7 @@
 /**
- * PostgreSQL CRUD tests.
- *
- * Prerequisites:
- *   - PostgreSQL running at localhost:5432 (or set DATABASE_URL)
- *   - Database and user from connection string (e.g. postgres/mypassword/mydatabase)
- *
- * Run: npm run test:db   or   npx playwright test tests/db-crud.spec.ts
- *
- * If PostgreSQL is not available, tests are skipped with a clear message.
+ * Database CRUD tests.
+ * Run: npm run test:db (uses PostgreSQL if available, else SQLite)
+ * Or: npm run test:db:sqlite to force SQLite
  */
 
 import { test, expect } from '@playwright/test';
@@ -19,21 +13,27 @@ import {
   update,
   remove,
   closePool,
+  setSqliteMode,
 } from '../db';
 
 let dbAvailable = false;
 
-test.describe('PostgreSQL CRUD operations', () => {
+test.describe('Database CRUD operations', () => {
   test.beforeAll(async () => {
     try {
       await initTable();
       dbAvailable = true;
     } catch {
-      dbAvailable = false;
-      await closePool();
-      console.warn(
-        'PostgreSQL not available — skipping DB tests. Set DATABASE_URL and ensure Postgres is running.'
-      );
+      setSqliteMode(true);
+      try {
+        await initTable();
+        dbAvailable = true;
+        console.warn('Using SQLite (PostgreSQL not available).');
+      } catch {
+        dbAvailable = false;
+        await closePool();
+        console.warn('Database unavailable — skipping tests.');
+      }
     }
   });
 
@@ -42,7 +42,7 @@ test.describe('PostgreSQL CRUD operations', () => {
   });
 
   test('Create: insert a new row and get id', async () => {
-    test.skip(!dbAvailable, 'PostgreSQL not available');
+    test.skip(!dbAvailable, 'Database not available');
     const created = await create({
       name: 'First Item',
       description: 'Created by CRUD test',
@@ -55,7 +55,7 @@ test.describe('PostgreSQL CRUD operations', () => {
   });
 
   test('Read: fetch row by id', async () => {
-    test.skip(!dbAvailable, 'PostgreSQL not available');
+    test.skip(!dbAvailable, 'Database not available');
     const created = await create({ name: 'Read Test', description: null });
     const found = await read(created!.id!);
     expect(found).not.toBeNull();
@@ -65,13 +65,13 @@ test.describe('PostgreSQL CRUD operations', () => {
   });
 
   test('Read: returns null for missing id', async () => {
-    test.skip(!dbAvailable, 'PostgreSQL not available');
+    test.skip(!dbAvailable, 'Database not available');
     const found = await read(999999);
     expect(found).toBeNull();
   });
 
   test('Read All: fetch all rows', async () => {
-    test.skip(!dbAvailable, 'PostgreSQL not available');
+    test.skip(!dbAvailable, 'Database not available');
     const before = await readAll();
     await create({ name: 'All Test', description: 'For readAll' });
     const after = await readAll();
@@ -81,7 +81,7 @@ test.describe('PostgreSQL CRUD operations', () => {
   });
 
   test('Update: change name and description', async () => {
-    test.skip(!dbAvailable, 'PostgreSQL not available');
+    test.skip(!dbAvailable, 'Database not available');
     const created = await create({
       name: 'Before Update',
       description: 'Original',
@@ -98,7 +98,7 @@ test.describe('PostgreSQL CRUD operations', () => {
   });
 
   test('Delete: remove row by id', async () => {
-    test.skip(!dbAvailable, 'PostgreSQL not available');
+    test.skip(!dbAvailable, 'Database not available');
     const created = await create({ name: 'To Delete', description: null });
     const deleted = await remove(created!.id!);
     expect(deleted).toBe(true);
@@ -107,7 +107,7 @@ test.describe('PostgreSQL CRUD operations', () => {
   });
 
   test('Delete: returns false for missing id', async () => {
-    test.skip(!dbAvailable, 'PostgreSQL not available');
+    test.skip(!dbAvailable, 'Database not available');
     const deleted = await remove(999999);
     expect(deleted).toBe(false);
   });
